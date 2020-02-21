@@ -1,0 +1,99 @@
+-- To find all the apps that are declined by fraud.
+
+WITH f1 AS(
+SELECT 
+--    CASE 
+--   WHEN (Subtask_type LIKE '%Call applicant -- 2nd attempt%' AND subtask_outcome LIKE '%NO_ANSWER%') THEN 'Keep'
+--   WHEN subtask_outcome IN ('FRAUD_FOUND', 'CONFIRM_FRAUD', 'NO_PHONE_NUMBER', 'DISCREPANCY', 'TRUE_HIT') THEN 'Keep'
+--   ELSE 'Not to keep'
+--   END AS Task_Keep,
+  cs.application_uuid,
+  cs.task_type AS Task_Type, 
+  ss.subtask_type_desc AS Subtask_Type,
+  cs.message AS Message,
+  cs.comments AS Comments,
+  ss.subtask_outcome, 
+  ss.subtask_outcome_data_comments AS Subtask_Comments,
+  cs.status, 
+  cs.requested_by AS Requested_By, 
+  cs.completed_by AS Completed_By, 
+  cs.requested_date AS Requested_Date, 
+  cs.completed_date AS Completed_Date
+
+FROM `figure-production.reporting.agg_current_task_status` cs
+JOIN `figure-production.reporting.agg_current_subtask_status` ss ON ss.task_uuid = cs.task_uuid
+WHERE cs.status  = 'FAILED' AND Task_Type IN ('DUPLICATE_SSN_REVIEW', 'PROPERTY_OWNERSHIP_FRAUD_REVIEW', 'DOCUMENT_VERIFICATION_FAILURE', 'FRAUD_REVIEW', 'FALSE_OWNERSHIP_TYPE_REVIEW', 'FACTA_REVIEW', 
+'BANK_ACCOUNT_OWNERSHIP_FRAUD_REVIEW','DUPLICATE_PROPERTY_OWNERSHIP_REVIEW', 'CREDIT_FRAUD_REVIEW', 'IDENTITY_DOCUMENT_FRAUD_REVIEW', 'GIACT_EMAIL_VERIFICATION_HIT_REVIEW', 'OFAC_HIT_REVIEW','MORTGAGE_PROPERTY_OWNERSHIP_REVIEW')
+),
+
+-- SELECT * FROM `figure-production.reporting.agg_current_task_status` 
+-- WHERE TASK_TYPE = 'MORTGAGE_PROPERTY_OWNERSHIP_REVIEW'
+-- WHERE application_uuid = '1ff60d91-7aa3-459f-8c02-d14035513d92'
+
+-- To get other app details from all product types
+f2 AS(
+(SELECT 
+  'HELOC' as Product_Type,
+  la.application_uuid_value AS Application_UUID_Value,
+  la.application_short_id AS Application_Short_ID,
+  la.create_timestamp AS App_Created_Datetime,
+  CONCAT(lp.first_name,' ',lp.last_name) AS Borrower_Name,
+  lp.email AS Email,
+  IFNULL(la.identity_uuid_value,lp.identity_uuid_value) AS Identity_UUID,
+  IFNULL(la.state,lp.state) AS State,
+  la.status AS Status,
+  la.adverse_action_declineReasons AS App_Decline_Reasons
+FROM `figure-production.reporting.lkup_profile` lp
+JOIN `figure-production.reporting.lkup_application` la ON la.identity_uuid_value = lp.identity_uuid_value)
+
+UNION ALL
+(SELECT 
+  'SLR' as Product_Type,
+  slr.Application_uuid_value AS Application_UUID_Value,
+  slr.short_loan_id AS Application_Short_ID,
+  slr.app_start_date AS App_Created_Datetime,
+  CONCAT(lp.first_name,' ',lp.last_name) AS Borrower_Name,
+  lp.email AS Email,
+  IFNULL(slr.identity_uuid_value,lp.identity_uuid_value) AS Identity_UUID,
+  IFNULL(slr.state,lp.state) AS State,
+  slr.stage AS Status,
+
+  slr.decline_reasons_reason AS App_Decline_Reasons
+FROM `figure-production.reporting.lkup_profile` lp 
+JOIN `figure-production.reporting.lkup_slr_application` slr ON slr.identity_uuid_value = lp.identity_uuid_value)
+
+UNION ALL
+
+(SELECT 
+  'Mortgage' as Product_Type,
+  mla.Application_uuid_value AS Application_UUID_Value,
+  mla.loan_number AS Application_Short_ID,
+  mla.app_start_date AS App_Created_Datetime,
+  CONCAT(lp.first_name,' ',lp.last_name) AS Borrower_Name,
+  lp.email AS Email,
+  IFNULL(mla.identity_uuid_value,lp.identity_uuid_value) AS Identity_UUID,
+  IFNULL(mla.property_state,lp.state) AS State,
+  mla.stage AS Status,
+ 
+  mla.decline_reasons_reason AS App_Decline_Reasons
+FROM `figure-production.reporting.lkup_profile` lp 
+JOIN `figure-production.reporting.lkup_mortgage_application` mla ON mla.identity_uuid_value = lp.identity_uuid_value)
+)
+
+SELECT * FROM(
+SELECT  
+  f2.Product_Type,
+  f2.Application_UUID_VALUE,
+  f2.Application_Short_ID,
+  f2.App_Created_Datetime,
+  f2.Borrower_Name,
+  f2.State,
+  f1.Task_Type, 
+  f1.Message,
+  f1.Subtask_Comments,
+  f1.Completed_by,
+  f1.Completed_Date,
+  row_number() OVER(PARTITION BY f2.Application_UUID_VALUE ORDER BY f1.Completed_Date DESC) AS Ranking
+FROM f2
+JOIN f1 ON f1.application_uuid = f2.Application_UUID_VALUE)
+WHERE Ranking = 1
