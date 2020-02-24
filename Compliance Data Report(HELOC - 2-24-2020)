@@ -7,11 +7,14 @@ FROM(
     loan_num AS Loan_Num,
     origination_funding_date AS Origination_Date,
     current_rate  AS Current_Rate,
-    dlc.asset_owner_uuid_value AS Asset_Owner_UUID,
+    dlc.asset_owner_uuid_value,
+    asset_owner_name,
     ROW_NUMBER() OVER(PARTITION BY loan_num ORDER BY calculation_ts DESC) AS rk1
-  FROM reporting.agg_daily_loan_calc dlc) t0
+  FROM reporting.agg_daily_loan_calc dlc
+  LEFT JOIN reporting.lkup_asset_owner lao ON lao.asset_owner_uuid = dlc.asset_owner_uuid_value ) t0
 WHERE rk1=1 AND product_type = 'HELOC' 
 ),
+
 
 ct AS (
 SELECT 
@@ -65,11 +68,10 @@ SELECT
   ROUND(CAST(la.application_income AS FLOAT64),0) AS Stated_Income,
   ROUND(CAST(ad.verified_income_amount AS FLOAT64),0) AS Verified_Income,
   (la.app_term*12) AS Term_Month,
-  Asset_Owner_UUID,
   ad.dob AS DOB,
   ad.email AS Email,
-  ad.profile_phone_number AS Profile_Phone_Number
-
+  ad.profile_phone_number AS Profile_Phone_Number,
+  asset_owner_name
  FROM `figure-production.reporting.lkup_application` la
 
 LEFT JOIN `figure-production.reporting.application_details` ad ON ad.application_uuid_value = la.application_uuid_value
@@ -112,7 +114,7 @@ FROM (
   SELECT
   rr.application_uuid_value,
   rr.stage,
-  rr.stage_num,       
+  rr.stage_num, 
   CASE 
   WHEN (rr.rk =1 AND rr.stage_num IN(9,10.5,11)) OR rr.stage_num = 11 THEN IFNULL(r.stage_exit_ts,rr.stage_entry_ts)
   WHEN rr.rk =1 AND rr.stage_num IN (98,99) THEN rr.stage_entry_ts
@@ -154,7 +156,7 @@ RF AS(SELECT
   ct.Verified_Income AS Verified_Income,
   ct.Decline_Codes AS Decline_Codes,
   ct.Decline_Reasons AS Decline_Reasons,
-  Asset_Owner_UUID   
+  asset_owner_name AS Asset_Owner_Name
 FROM cr
 JOIN ct ON ct.App_UUID = cr.application_uuid_value
 )
@@ -166,5 +168,5 @@ FROM(SELECT
   ROW_NUMBER() OVER(PARTITION BY Loan_Num ORDER BY Application_Date) as R
 FROM RF
 WHERE Decision_Date IS NOT NULL) d
-WHERE R=1 AND Decision = 'DECLINED' AND Decision IN ('DECLINED','CANCELLED','COMPLETE','RESCISSION','RECORDING') 
+WHERE R=1 AND Decision IN ('DECLINED','CANCELLED','COMPLETE','RESCISSION','RECORDING') 
 ORDER BY 1 DESC
