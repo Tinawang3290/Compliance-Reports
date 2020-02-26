@@ -1,0 +1,134 @@
+WITH f AS(
+SELECT 
+  created_date_utc AS Created_Date,
+  csp_data_proto_external_csp_complaint_r1_uuid_value AS Complaint_UUID,
+  application_uuid_value AS Application_UUID,
+  concat(contact_first_name, ' ',contact_last_name) AS Contact_Name,
+  CASE  
+     WHEN product IN('FHLB') THEN 'FHLB'
+     WHEN product IN ('--', " ") THEN 'Not Specified'
+     WHEN product = 'Student Loan Refi' THEN 'SLR'
+     WHEN product = 'CASHOUT_REFI' THEN 'Cashout_Refi'
+     ELSE  'HELOC'
+   END AS Product_Type,
+     contact_phone AS Contact_Phone,
+     contact_email AS Contact_Email,
+     contact_state AS Contact_State,
+     complaint_tier AS Complaint_Tier,    
+  CASE Created_By_Csr_Uuid_Value
+    WHEN '83cfc148-708b-4d06-9edd-dd4a2bc235b5' THEN 'Mike Winters'	
+    WHEN 'af29dd2b-bf4c-4516-be32-84b23ab6d9e7' THEN 'Daniel Thomas'	
+    WHEN '7b6790ce-984a-4aa6-8488-1deddf39ec29' THEN 'Kathleen Becker'	
+    WHEN 'a16df118-928f-4317-9d14-6c1654021f75' THEN 'Ron Jones'	
+    WHEN 'cc532230-7c3c-440c-9a8c-649b6b80320c' THEN 'Jacob Flynn'	
+    WHEN '3f5786a7-29f1-4d93-8016-d226bb0ba56b' THEN 'Austin Fisher'	
+    WHEN '296c9115-d718-453a-a84d-5bed818d6de2' THEN 'Bryan Powell'	
+    WHEN '15d00800-b56e-4a88-922a-bdb46bb38e82' THEN 'Chris Barnes'	
+    WHEN '0a4ce50d-a355-4bb6-ba63-ebefdf0a88f5' THEN 'Diedre Neuman'	
+    WHEN '7503b2a3-04cc-426e-b60f-098c3f552908' THEN 'JD Durham'	
+    WHEN '7b31ae59-ebce-4a6a-977c-ea8f1b89f73a' THEN 'Tony Hnat'	
+    WHEN '07836a90-63d3-4659-b8fb-f378b435982d' THEN 'Jesse Lennon'	
+    WHEN 'a3107b07-990b-4761-8169-0dfdfed7dd11' THEN 'Audris Hogan'	
+    WHEN '524047c0-f66d-4ca5-bffa-5df513a8092b' THEN 'Brandon Kennedy'	
+    WHEN '863e9767-20f5-446d-96c2-59236d52b95c' THEN 'Rebecca Baughman'	
+    WHEN '32acbd56-b4c3-4833-a507-8cda929c0eaa' THEN 'Scott Malone'	
+    WHEN 'fd039ee4-1953-48c7-b80c-73b2b2daa944' THEN 'Matt Hellwinkel'	
+    WHEN '38572dab-ce78-4b65-9c3e-e1d2aff21986' THEN 'Cooper Whittemore'	
+    WHEN '57ac24f5-e4e9-4090-bc8d-126486e8090a' THEN 'Brooke Locey'	
+    WHEN '1f407185-aea2-4eed-8cae-f770ad6f5c29' THEN 'Rosalie Mahler'	
+    WHEN 'd118278f-af59-4238-b6e8-5c77b07efe4f' THEN 'Amanda Guitron'	
+    WHEN '7b80900a-0506-4b91-b75e-23ddd90a12e7' THEN 'Austin Heller'	
+    WHEN 'f850b15b-2eb7-4f79-b5f8-88869e875b19' THEN 'Crystal Johnson'	
+    WHEN '47844a46-32b1-4a69-b6f7-4d1624ef651f' THEN 'Rory Birmingham'	
+    WHEN '69015173-2a49-493e-9e6e-abf02b1064e3' THEN 'Andrew Canavero'	
+    WHEN '8ef3427c-3b9d-4cc7-a16f-8eb4e6e0cef3' THEN 'Mithun Gunalan'	
+    WHEN '8da52967-685f-45e2-a44e-cf5a9d5b691d' THEN 'Daniel Abbott'	
+    WHEN 'd4393c10-2b67-4fbb-bad3-7d63669cd8af' THEN 'Nicole Oshan'	
+    WHEN 'ecd9c6e2-4171-4146-be12-68221b024d20' THEN 'Michael Cook'	
+    WHEN '8cf5b84c-8ad7-40fd-98ea-29a95c44fd70' THEN 'Sumoo Allotey'	
+    WHEN 'a994848a-964a-4347-aad4-6632bb90f092' THEN 'Richard Williamson'	
+    WHEN '1466c925-6108-4d6a-b48c-6b75eae19ecc' THEN 'Larry Burtness'	
+    WHEN 'e1a89502-0fa5-4680-8f49-b024335eb5e7' THEN 'Helena Farrar'	
+    WHEN 'c4712da1-ece0-4cc2-a6e7-7e4e4dc7fd34' THEN 'Tim Franks'	
+    WHEN '8e1a10f0-37bb-4dc5-a4d6-69f2ad38683d' THEN 'Brandon Kliefoth'	
+    WHEN '10c24f32-79e6-4f2d-9c8d-fc13df60637c' THEN 'Jenny Amaro-Palacios'	
+    WHEN '2dcd0407-f90c-4630-96eb-25e9f01523ac' THEN 'Trever Mann'	
+    WHEN 'a731fe25c-7391-4bb1-98da-f52a44c8f9f6' THEN 'Kacey Carolan'	
+    WHEN 'c9b77289-b833-484d-afe4-2a11fb8254c0' THEN 'Jared Barton'	
+    WHEN '9fe3dcc6-746b-48b3-adfa-f8c85874b84c' THEN 'Larry Greenleaf'	
+    WHEN '3871952b-7bed-4949-b337-dfce24fbd651' THEN 'Rod Hidalgo'	
+    WHEN 'a98a9250-a2d9-4005-b510-f3ffbed7df2d' THEN 'Hannah Byrns'	
+    WHEN '583fab05-6b69-4262-b829-037954345ceb' THEN 'Taylor Davis'	
+    WHEN '9acc6e68-868b-4748-80d7-e9457796bfed' THEN 'Narayan Gill'	
+    WHEN '6f915ef6-4c92-4b16-bb0a-755112772e2a' THEN 'Christian Bennett'	
+    WHEN '99c39cda-68bc-4e6c-9bb8-1ac614a3d1f0' THEN 'James Long'	
+    WHEN 'fe227d8c-21aa-45c0-9e93-d850d118ba74' THEN 'Connie Voong'	
+    WHEN '38a8f233-2248-481f-92cc-ef67a69f878a' THEN 'Jasmine Edwards'	
+    WHEN '11483171-e9f6-4876-befc-ff4ba019142a' THEN 'Zachary Edelen'	
+    WHEN '142b7a82-f5b4-442e-99dc-38d1ea7f1ecc' THEN 'Ian Pieller'	
+    WHEN '2c05b872-aaaa-4cf5-9ca7-ac33bf2d1902' THEN 'Erickson Miller'	
+    WHEN 'c4328e9d-a1f0-4c9f-aefe-0e5c64b73266' THEN 'Jordan Wines'	
+    WHEN '590c1922-852f-415c-abf5-f66d2102e990' THEN 'Haider Rafique'	
+    WHEN '3030cc55-5dbb-4abf-b273-8c289fa58384' THEN 'Travis Alpers'	
+    WHEN '471d221b-4351-4743-9cfa-0250e5d9ebb4' THEN 'Connor Matheson'	
+    WHEN 'a970382c-cf8a-463d-b6af-babc79e268a8' THEN 'Laine Blackmon'	
+    WHEN '731fe25c-7391-4bb1-98da-f52a44c8f9f6' THEN 'Kacey Carolan'	
+    WHEN '0ea56668-29c4-4a60-bf75-eac24cf8431e' THEN 'Jack Bell'	
+    WHEN '61139eff-aea8-49c5-848a-59a1730464ea' THEN 'Jerome Rubio'	
+    WHEN '6ba25711-ee18-4d6a-9c0f-77cd79fd91ed' THEN 'Richard Zabaneh'
+    WHEN '359f3086-504a-45ee-b91f-4abc35e77b72' THEN 'Anthony Carvalho'
+    WHEN '99ccb1fb-baef-4e57-9e58-a5ef786a67e6' THEN 'John Dickson'
+    WHEN 'cd2d1679-7dd4-416d-8c6a-5f232eac7940' THEN 'Taylor Clarke'
+    WHEN '6ba25711-ee18-4d6a-9c0f-77cd79fd91ed' THEN 'Richard Zabaneh'
+    WHEN 'c643b6b7-b973-4e7d-a863-4790074ebd70' THEN 'Matt Wojtasiak'
+    WHEN '10f271fb-9c0d-4607-96bd-021ed2e84547' THEN 'Harrison Baker'
+    WHEN 'e30b4345-5e56-4da9-bf58-8ff84d744890' THEN 'David Ceballos'
+    WHEN '99ccb1fb-baef-4e57-9e58-a5ef786a67e6' THEN 'John Dickson'
+    WHEN 'cd2d1679-7dd4-416d-8c6a-5f232eac7940' THEN 'Taylor Clarke'
+    WHEN '359f3086-504a-45ee-b91f-4abc35e77b72' THEN 'Anthony Carvalho'
+    ELSE NULL
+  END	AS Creator,
+  CASE approved_By_Csr_Uuid_Value
+    WHEN '32acbd56-b4c3-4833-a507-8cda929c0eaa' THEN 'Scott Malone'
+    WHEN '47844a46-32b1-4a69-b6f7-4d1624ef651f' THEN 'Rory Birmingham'
+    WHEN 'af29dd2b-bf4c-4516-be32-84b23ab6d9e7' THEN 'Daniel Thomas'
+    WHEN '83cfc148-708b-4d06-9edd-dd4a2bc235b5' THEN 'Mike Winters'
+    WHEN '7b31ae59-ebce-4a6a-977c-ea8f1b89f73a' THEN 'Tony Hnat'
+    WHEN '57ac24f5-e4e9-4090-bc8d-126486e8090a' THEN 'Brooke Locey'
+    WHEN 'a872e814-4c35-4a19-93df-84fc90d84da8' THEN 'Jarryd Allison'
+    WHEN '7503b2a3-04cc-426e-b60f-098c3f552908' THEN 'JD Durham'
+    WHEN '1f407185-aea2-4eed-8cae-f770ad6f5c29' THEN 'Rosalie Mahler'
+    ELSE 'Not Approved'
+  END AS Approver,
+  complaint_summary AS Complaint_Summary,
+  root_cause_analysis AS Root_Cause_Analysis,
+  resolution_description AS Resolution_Description,
+  category AS Category,
+  channel AS Channel,
+  status AS Status,   
+  CASE is_approved  
+    WHEN FALSE THEN 'No'
+    WHEN TRUE THEN 'Yes'
+  END AS Approved
+FROM  `figure-production.reporting.lkup_csp_complaint`),
+
+
+ff AS (
+SELECT 
+  * 
+FROM (
+SELECT 
+  *,
+  lao.asset_owner_name AS Asset_Owner,
+  row_number() OVER (PARTITION BY loan_num ORDER BY calculation_date DESC) AS ranking 
+FROM `figure-production.reporting.agg_daily_loan_calc` dlc
+LEFT JOIN reporting.lkup_asset_owner lao ON lao.asset_owner_uuid = dlc.asset_owner_uuid_value
+) 
+WHERE ranking =1)
+
+SELECT
+  f.*, 
+  ff.Asset_Owner 
+FROM f
+LEFT JOIN ff ON ff.loan_num = f.application_UUID
+ORDER BY created_date DESC
