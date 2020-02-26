@@ -1,0 +1,125 @@
+-- To get the SLR funded
+WITH t AS(
+SELECT 
+  *
+FROM(
+  SELECT 
+    product_type,
+    loan_num AS Loan_Num,
+    origination_funding_date AS Origination_Date,
+    current_rate  AS Current_Rate,
+    dlc.asset_owner_uuid_value,
+    asset_owner_name,
+    ROW_NUMBER() OVER(PARTITION BY loan_num ORDER BY calculation_ts DESC) AS rk1
+  FROM reporting.agg_daily_loan_calc dlc
+  LEFT JOIN reporting.lkup_asset_owner lao ON lao.asset_owner_uuid = dlc.asset_owner_uuid_value ) t0
+WHERE rk1=1 AND product_type = 'SLR' 
+),
+
+ct AS (
+SELECT 
+  CASE
+    WHEN IFNULL(la.state, lp.state) IN ('HI') THEN 'Pacific/Honolulu'
+    WHEN IFNULL(la.state, lp.state) IN ('AK') THEN 'America/Anchorage'
+    WHEN IFNULL(la.state, lp.state) IN ('CA','WA','OR','NV') THEN 'America/Los_Angeles'
+    WHEN IFNULL(la.state, lp.state) IN ('AZ','UT','MT','NE','ID','NM','CO','WY') THEN 'America/Denver'
+    WHEN IFNULL(la.state, lp.state) IN ('ND','SD','NE','KS','OK','TX','MN','IA','MO','AR','LA','WI','IL','KY','TN','MS','AL') THEN 'America/Chicago'
+    WHEN IFNULL(la.state, lp.state) IN ('MI','IN','GA','FL','SC','NC','OH','WV','VA','PA','NY','VT','ME','NH','MA','RI','CT','NJ','DE','MD','DC') THEN 'America/New_York'
+    WHEN IFNULL(la.state, lp.state) IS NULL THEN 'America/Los_Angeles'
+    ELSE 'America/Los_Angeles'
+  END AS time_zone_lookup, 
+  la.app_start_date,
+  IFNULL(t.loan_num,la.application_uuid_value) AS App_UUID,
+  t.Origination_Date,
+  IFNULL(ARRAY_TO_STRING([la.first_name,la.last_name],' '),ARRAY_TO_STRING([lp.first_name,lp.last_name],' ')) AS Borrower_Name,
+  la.stage,
+  la.decline_reasons_reason AS Decline_Reasons,
+  la.decline_code AS Decline_codes,
+  la.loan_amount AS Loan_Amount,
+  IFNULL(ARRAY_TO_STRING([la.street1,la.street2],''),ARRAY_TO_STRING([lp.street1,lp.street2],'')) AS Street,
+  IFNULL(la.city, lp.city) AS City,
+  IFNULL(la.state, lp.state) AS State,
+  IFNULL(la.zip, lp.zip) AS Zip,
+  la.app_rate AS Original_Rate,
+  t.current_rate AS Current_Rate,
+  la.rate_type AS Rate_Type,
+  IFNULL(la.hard_fico_score, la.soft_fico_score) AS FICO,
+  ROUND(CAST(la.stated_monthly_income AS FLOAT64),0) AS Stated_Income,
+  ROUND(CAST(la.uw_verified_income AS FLOAT64),0) AS Verified_Income,
+  (la.loan_term*12) AS Term_Month,
+  asset_owner_name
+FROM reporting.lkup_slr_application la
+LEFT JOIN reporting.lkup_profile lp ON lp.identity_uuid_value = la.identity_uuid_value
+LEFT JOIN t ON t.loan_num = la.application_uuid_value
+),
+
+r AS( 
+SELECT
+  application_uuid_value,
+  stage,
+  stage_exit_ts 
+FROM  reporting.f_slr_figure_funnel_event
+WHERE  stage_num = 11
+),
+
+-- To get the stage of the table
+rr  AS (
+SELECT 
+  *
+FROM(
+SELECT
+ fe.*,
+ ROW_NUMBER() OVER(PARTITION BY application_uuid_value ORDER BY stage_entry_ts DESC) AS rk
+FROM reporting.f_slr_figure_funnel_event fe)
+WHERE rk =1 
+),
+
+ -- To get the datatime when a loan is in terminal status (funded, cancelled, declined, funded, complete, etc) .
+ -- For funded loans, We need to get datetime of signing prom note 
+cr AS (
+SELECT
+  * 
+FROM (
+  SELECT
+  rr.application_uuid_value,
+  rr.stage,
+  rr.stage_num, 
+  CASE 
+  WHEN (rr.rk =1 AND rr.stage_num IN(16,17,18)) OR rr.stage_num = 18 THEN IFNULL(r.stage_exit_ts,rr.stage_entry_ts)
+  WHEN rr.rk =1 AND rr.stage_num IN (98,99) THEN rr.stage_entry_ts 
+  END AS Decision_Datetime, 
+  'SLR' AS Loan_Type
+  FROM rr
+LEFT JOIN r ON r.application_uuid_value = rr.application_uuid_value) r0
+WHERE Decision_Datetime IS NOT NULL),
+
+RF AS(SELECT 
+  DATETIME(ct.app_start_date, ct.time_zone_lookup) AS Application_Date,
+  ct.App_UUID AS Loan_Num,
+  cr.stage AS Decision,
+  DATETIME(Decision_Datetime, ct.time_zone_lookup) AS Decision_Date,
+  ct.Borrower_Name,
+  ct.Origination_Date,
+  Loan_Type AS Product_Type,
+  ct.Street AS Property_Address,
+  ct.City AS City,
+  ct.State AS State,
+  ct.Zip AS Zip,
+  ct.FICO,
+  ct.Original_Rate,
+  ct.Current_Rate,
+  ct.Rate_Type,
+  ct.Term_Month AS Term_Months,
+  ct.loan_amount AS Loan_Amount,
+  ct.Stated_Income AS Stated_Income,
+  ct.Verified_Income AS Verified_Income,
+  ct.Decline_Codes AS Decline_Codes,
+  ct.Decline_Reasons AS Decline_Reasons,
+  asset_owner_name AS Asset_Owner_Name
+FROM cr
+JOIN ct ON ct.App_UUID = cr.application_uuid_value
+)
+
+SELECT 
+  *
+FROM RF
