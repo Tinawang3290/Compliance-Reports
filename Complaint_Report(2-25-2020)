@@ -1,3 +1,4 @@
+
 WITH f AS(
 SELECT 
   created_date_utc AS Created_Date,
@@ -6,15 +7,23 @@ SELECT
   concat(contact_first_name, ' ',contact_last_name) AS Contact_Name,
   CASE  
      WHEN product IN('FHLB') THEN 'FHLB'
-     WHEN product IN ('--', " ") THEN 'Not Specified'
+     WHEN product IN ('--', " ") THEN 'N/A'
      WHEN product = 'Student Loan Refi' THEN 'SLR'
-     WHEN product = 'CASHOUT_REFI' THEN 'Cashout_Refi'
+     WHEN product = 'MERLOC' THEN 'MERLOC'
+     WHEN product = 'CASHOUT_REFI' THEN 'CASHOUT_REFI'
+
      ELSE  'HELOC'
    END AS Product_Type,
      contact_phone AS Contact_Phone,
      contact_email AS Contact_Email,
      contact_state AS Contact_State,
-     complaint_tier AS Complaint_Tier,    
+     complaint_tier AS Complaint_Tier,  
+  CASE 
+  WHEN correspondent = 'N/A' THEN 'N/A'
+  WHEN correspondent is null THEN 'N/A'
+  WHEN correspondent IN ('HOME POINT', 'HOMEPOINT') THEN 'HOME POINT'
+  ELSE correspondent
+  END AS Correspondent,
   CASE Created_By_Csr_Uuid_Value
     WHEN '83cfc148-708b-4d06-9edd-dd4a2bc235b5' THEN 'Mike Winters'	
     WHEN 'af29dd2b-bf4c-4516-be32-84b23ab6d9e7' THEN 'Daniel Thomas'	
@@ -96,8 +105,6 @@ SELECT
     WHEN '7b31ae59-ebce-4a6a-977c-ea8f1b89f73a' THEN 'Tony Hnat'
     WHEN '57ac24f5-e4e9-4090-bc8d-126486e8090a' THEN 'Brooke Locey'
     WHEN 'a872e814-4c35-4a19-93df-84fc90d84da8' THEN 'Jarryd Allison'
-    WHEN '7503b2a3-04cc-426e-b60f-098c3f552908' THEN 'JD Durham'
-    WHEN '1f407185-aea2-4eed-8cae-f770ad6f5c29' THEN 'Rosalie Mahler'
     ELSE 'Not Approved'
   END AS Approver,
   complaint_summary AS Complaint_Summary,
@@ -110,8 +117,8 @@ SELECT
     WHEN FALSE THEN 'No'
     WHEN TRUE THEN 'Yes'
   END AS Approved
-FROM  `figure-production.reporting.lkup_csp_complaint`),
-
+FROM reporting.lkup_csp_complaint
+),
 
 ff AS (
 SELECT 
@@ -132,3 +139,4 @@ SELECT
 FROM f
 LEFT JOIN ff ON ff.loan_num = f.application_UUID
 ORDER BY created_date DESC
+
